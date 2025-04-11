@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import io
 
 st.set_page_config(page_title="Analiza ryzyka", layout="wide")
 st.title("🔐 Analiza ryzyka systemów teleinformatycznych")
@@ -89,3 +90,14 @@ st.write("""
 - **Edukacja użytkowników**: Przeprowadzaj regularne szkolenia z zakresu cyberbezpieczeństwa dla pracowników.
 - **Regularne aktualizacje**: Utrzymuj aktualność systemów operacyjnych i oprogramowania zabezpieczającego.
 """)
+
+# Export to CSV
+st.subheader("📥 Eksportuj dane")
+if st.button("Eksportuj do CSV"):
+    csv = st.session_state.df.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="Pobierz plik CSV",
+        data=csv,
+        file_name='risks.csv',
+        mime='text/csv',
+    )

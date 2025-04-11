@@ -81,13 +81,22 @@ st.dataframe(
     use_container_width=True
 )
 
-# Export to CSV
+# Eksport do CSV
 st.subheader("📥 Eksportuj dane")
 if st.button("Eksportuj do CSV"):
-    csv = st.session_state.df.to_csv(index=False).encode('utf-8')
+    # Tworzenie DataFrame z nagłówkami w języku polskim
+    df_export = st.session_state.df.rename(columns={
+        "Zagrożenie": "Zagrożenie",
+        "Prawdopodobieństwo": "Prawdopodobieństwo",
+        "Wpływ": "Wpływ",
+        "Poziom ryzyka": "Poziom ryzyka",
+        "Klasyfikacja": "Klasyfikacja"
+    })
+    
+    csv = df_export.to_csv(index=False, encoding='utf-8', sep=';')  # Użyj `;` jako separatora
     st.download_button(
         label="Pobierz plik CSV",
         data=csv,
-        file_name='risks.csv',
+        file_name='zagrozenia.csv',  # Nazwa pliku
         mime='text/csv',
     )

@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 
-# Ustawienia strony
 st.set_page_config(page_title="Analiza ryzyka", layout="wide")
 st.title("🔐 Analiza ryzyka systemów teleinformatycznych")
 
@@ -26,37 +25,45 @@ default_risks = [
 if "df" not in st.session_state:
     st.session_state.df = pd.DataFrame(default_risks)
 
-# Dodawanie zagrożeń sieciowych
-st.subheader("🔗 Analiza ryzyka systemów sieciowych")
-with st.form("add_network_security_risk"):
-    name = st.text_input("Opis zagrożenia sieciowego")
+# ➕ Dodawanie nowego ryzyka
+st.subheader("➕ Dodaj nowe zagrożenie")
+with st.form("add_risk_form"):
+    name = st.text_input("Opis zagrożenia")
     prob = st.slider("Prawdopodobieństwo (1-5)", 1, 5, 3)
     impact = st.slider("Wpływ (1-5)", 1, 5, 3)
-    submitted = st.form_submit_button("Dodaj zagrożenie sieciowe")
+    submitted = st.form_submit_button("Dodaj")
 
-if submitted and name.strip() != "":
-    new_row = {"Zagrożenie": name, "Prawdopodobieństwo": prob, "Wpływ": impact}
-    st.session_state.df = pd.concat([st.session_state.df, pd.DataFrame([new_row])], ignore_index=True)
-    st.success("Zagrożenie sieciowe dodane.")
+    if submitted and name.strip() != "":
+        new_row = {"Zagrożenie": name, "Prawdopodobieństwo": prob, "Wpływ": impact}
+        st.session_state.df = pd.concat([st.session_state.df, pd.DataFrame([new_row])], ignore_index=True)
+        st.success("Zagrożenie dodane.")
 
-# Wyświetlanie listy dodanych zagrożeń sieciowych
-st.subheader("📊 Dodane zagrożenia sieciowe")
-st.dataframe(st.session_state.df)
+# ✏️ Edytuj ryzyka w interaktywnej tabeli
+st.subheader("✏️ Edytuj macierz ryzyka")
+edited_df = st.data_editor(
+    st.session_state.df,
+    num_rows="dynamic",
+    use_container_width=True,
+    key="risk_editor"
+)
 
-# Obliczanie poziomu ryzyka i klasyfikacji
-st.session_state.df["Poziom ryzyka"] = st.session_state.df["Prawdopodobieństwo"] * st.session_state.df["Wpływ"]
-st.session_state.df["Klasyfikacja"] = st.session_state.df["Poziom ryzyka"].apply(klasyfikuj_ryzyko)
+# Zapisz zmodyfikowaną tabelę do sesji
+st.session_state.df = edited_df.copy()
 
-# Filtrowanie
+# Oblicz poziom ryzyka i klasyfikację
+edited_df["Poziom ryzyka"] = edited_df["Prawdopodobieństwo"] * edited_df["Wpływ"]
+edited_df["Klasyfikacja"] = edited_df["Poziom ryzyka"].apply(klasyfikuj_ryzyko)
+
+# 📋 Filtrowanie
 st.subheader("📋 Filtruj według poziomu ryzyka")
 filt = st.radio("Pokaż:", ["Wszystkie", "Niskie", "Średnie", "Wysokie"], horizontal=True)
 
 if filt != "Wszystkie":
-    df_filtered = st.session_state.df[st.session_state.df["Klasyfikacja"] == filt]
+    df_filtered = edited_df[edited_df["Klasyfikacja"] == filt]
 else:
-    df_filtered = st.session_state.df
+    df_filtered = edited_df
 
-# Kolorowanie
+# 🎨 Kolorowanie
 def koloruj(val):
     if val == "Niskie":
         return "background-color: #d4edda"
@@ -66,7 +73,7 @@ def koloruj(val):
         return "background-color: #f8d7da"
     return ""
 
-# Wyświetlenie macierzy ryzyka
+# 📊 Wyświetlenie
 st.subheader("📊 Macierz ryzyka")
 st.dataframe(
     df_filtered.style.applymap(koloruj, subset=["Klasyfikacja"]),

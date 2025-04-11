@@ -94,7 +94,7 @@ if st.button("Eksportuj do CSV"):
         "Klasyfikacja": "Klasyfikacja"
     })
     
-    csv = df_export.to_csv(index=False, encoding='utf-8', sep=';')  # Użyj `;` jako separatora
+    csv = df_export.to_csv(index=False, encoding='utf-8-sig', sep=';')  # Użyj `;` jako separatora
     st.download_button(
         label="Pobierz plik CSV",
         data=csv,

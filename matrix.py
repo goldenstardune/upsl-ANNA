@@ -1,4 +1,4 @@
- # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
 import io
@@ -85,14 +85,17 @@ st.dataframe(
 # 📥 Eksport do CSV
 st.subheader("📥 Eksportuj dane")
 if st.button("Eksportuj do CSV"):
-    df_export = st.session_state.df.rename(columns={
+    # Użyj st.session_state.df zamiast edited_df, aby mieć pewność, że eksportujesz aktualne dane
+    df_export = st.session_state.df.copy()
+    
+    df_export.rename(columns={
         "Zagrożenie": "Zagrożenie",
         "Prawdopodobieństwo": "Prawdopodobieństwo",
         "Wpływ": "Wpływ",
         "Poziom ryzyka": "Poziom ryzyka",
         "Klasyfikacja": "Klasyfikacja"
-    })
-    
+    }, inplace=True) # Użyj inplace=True żeby zmodyfikować df_export
+
     csv = df_export.to_csv(index=False, encoding='utf-8-sig', sep=';')
     st.download_button(
         label="Pobierz plik CSV",

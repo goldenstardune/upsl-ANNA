@@ -82,32 +82,21 @@ st.dataframe(
     use_container_width=True
 )
 
-# 📥 Konwersja na Excel
-def to_excel(df):
-    output = BytesIO()
-    writer = pd.ExcelWriter(output, engine='xlsxwriter')
-    df.to_excel(writer, index=False, sheet_name='Arkusz1')  # Zmiana nazwy arkusza na polską
-    workbook = writer.book
-    worksheet = writer.sheets['Arkusz1']  # Odwołanie do arkusza po polsku
-    
-    writer.close()
-    processed_data = output.getvalue()
-    return processed_data
-
-df_export = st.session_state.df.rename(columns={
-       "Zagrożenie": "Zagrożenie",
-       "Prawdopodobieństwo": "Prawdopodobieństwo",
-       "Wpływ": "Wpływ",
-       "Poziom ryzyka": "Poziom ryzyka",
-       "Klasyfikacja": "Klasyfikacja"
-   })
-
-df_xlsx = to_excel(df_export)
-
+# 📥 Eksport do CSV
 st.subheader("📥 Eksportuj dane")
-st.download_button(
-    label="Pobierz plik Excel",
-    data=df_xlsx,
-    file_name='zagrozenia.xlsx',
-    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-)
+if st.button("Eksportuj do CSV"):
+    df_export = st.session_state.df.rename(columns={
+        "Zagrożenie": "Zagrożenie",
+        "Prawdopodobieństwo": "Prawdopodobieństwo",
+        "Wpływ": "Wpływ",
+        "Poziom ryzyka": "Poziom ryzyka",
+        "Klasyfikacja": "Klasyfikacja"
+    })
+    
+    csv = df_export.to_csv(index=False, encoding='utf-8-sig', sep=';')
+    st.download_button(
+        label="Pobierz plik CSV",
+        data=csv,
+        file_name='zagrozenia.csv',
+        mime='text/csv',
+    )

@@ -1,7 +1,7 @@
  # -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
-from io import BytesIO
+import io
 
 st.set_page_config(page_title="Analiza ryzyka", layout="wide")
 st.title("🔐 Analiza ryzyka systemów teleinformatycznych")

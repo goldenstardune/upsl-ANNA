@@ -94,9 +94,9 @@ if st.button("Eksportuj do Excela"):
         "Klasyfikacja": "Klasyfikacja"
     }, inplace=True)
 
-    # Utworzenie pliku Excel w pamięci
     excel_file = io.BytesIO()
-    df_export.to_excel(excel_file, index=False, encoding='utf-8', sheet_name='Arkusz1')
+    with pd.ExcelWriter(excel_file, engine='openpyxl', mode='w') as writer:
+        df_export.to_excel(writer, sheet_name='Arkusz1', index=False)
     excel_file.seek(0)
 
     st.download_button(

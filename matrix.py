@@ -1,7 +1,3 @@
-Here's the modified version of your Streamlit app code, which includes the functionality to export the data to an Excel file using openpyxl. You'll find the appropriate export button integrated into the interface for easy data export.
-
-python
-Copy code
 import streamlit as st
 import pandas as pd
 from openpyxl import Workbook

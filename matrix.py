@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
-import openpyxl
-from io import BytesIO
+import io
 
 st.set_page_config(page_title="Analiza ryzyka", layout="wide")
 st.title("🔐 Analiza ryzyka systemów teleinformatycznych")
@@ -77,26 +76,27 @@ def koloruj(val):
 
 # 📊 Wyświetlenie
 st.subheader("📊 Macierz ryzyka")
-styled_df = df_filtered.style.applymap(koloruj, subset=["Klasyfikacja"])
 st.dataframe(
-    styled_df,
+    df_filtered.style.applymap(koloruj, subset=["Klasyfikacja"]),
     use_container_width=True
 )
 
-# Export do Excela
-def to_excel(df):
-    output = BytesIO()
-    writer = pd.ExcelWriter(output, engine='openpyxl')
-    df.to_excel(writer, sheet_name='Macierz Ryzyka', index=False)
-    writer.close()
-    processed_data = output.getvalue()
-    return processed_data
-
-excel_file = to_excel(df_filtered)
-
-st.download_button(
-    label="💾 Pobierz macierz ryzyka jako XLSX",
-    data=excel_file,
-    file_name="macierz_ryzyka.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
+# 📥 Eksport do CSV
+st.subheader("📥 Eksportuj dane")
+if st.button("Eksportuj do CSV"):
+    # Tworzenie DataFrame z nagłówkami w języku polskim
+    df_export = st.session_state.df.rename(columns={
+        "Zagrożenie": "Zagrożenie",
+        "Prawdopodobieństwo": "Prawdopodobieństwo",
+        "Wpływ": "Wpływ",
+        "Poziom ryzyka": "Poziom ryzyka",
+        "Klasyfikacja": "Klasyfikacja"
+    })
+    
+    csv = df_export.to_csv(index=False, encoding='utf-8', sep=';')  # Użyj `;` jako separatora
+    st.download_button(
+        label="Pobierz plik CSV",
+        data=csv,
+        file_name='zagrozenia.csv',  # Nazwa pliku
+        mime='text/csv',
+    )

@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import openpyxl
+from io import BytesIO
 
 st.set_page_config(page_title="Analiza ryzyka", layout="wide")
 st.title("🔐 Analiza ryzyka systemów teleinformatycznych")
@@ -76,23 +77,26 @@ def koloruj(val):
 
 # 📊 Wyświetlenie
 st.subheader("📊 Macierz ryzyka")
+styled_df = df_filtered.style.applymap(koloruj, subset=["Klasyfikacja"])
 st.dataframe(
-    df_filtered.style.applymap(koloruj, subset=["Klasyfikacja"]),
+    styled_df,
     use_container_width=True
 )
 
-# 📤 Eksportuj do XLSX
-st.subheader("📤 Eksportuj dane do pliku XLSX")
-if st.button("Eksportuj do XLSX"):
-    file_name = "raport_analiza_ryzyka.xlsx"
-    edited_df.to_excel(file_name, index=False)
-    st.success(f"Plik {file_name} został utworzony i jest gotowy do pobrania.")
+# Export do Excela
+def to_excel(df):
+    output = BytesIO()
+    writer = pd.ExcelWriter(output, engine='openpyxl')
+    df.to_excel(writer, sheet_name='Macierz Ryzyka', index=False)
+    writer.close()
+    processed_data = output.getvalue()
+    return processed_data
 
-    # Rozpocznij pobieranie pliku
-    with open(file_name, "rb") as f:
-        st.download_button(
-            label="Pobierz plik XLSX",
-            data=f,
-            file_name=file_name,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+excel_file = to_excel(df_filtered)
+
+st.download_button(
+    label="💾 Pobierz macierz ryzyka jako XLSX",
+    data=excel_file,
+    file_name="macierz_ryzyka.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)

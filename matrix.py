@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-from openpyxl import Workbook
 
 st.set_page_config(page_title="Analiza ryzyka", layout="wide")
 st.title("🔐 Analiza ryzyka systemów teleinformatycznych")
@@ -81,13 +80,18 @@ st.dataframe(
     use_container_width=True
 )
 
-# 📥 Eksport danych do pliku Excel
-if st.button("📥 Eksportuj dane do Excel"):
-    # Przygotowanie danych do eksportu
-    df_export = df_filtered.copy()
+# 📤 Eksportuj do XLSX
+st.subheader("📤 Eksportuj dane do pliku XLSX")
+if st.button("Eksportuj do XLSX"):
+    file_name = "raport_analiza_ryzyka.xlsx"
+    edited_df.to_excel(file_name, index=False)
+    st.success(f"Plik {file_name} został utworzony i jest gotowy do pobrania.")
 
-    # Zapis do pliku Excel
-    with pd.ExcelWriter('Analiza_ryzyka.xlsx', engine='openpyxl') as writer:
-        df_export.to_excel(writer, index=False, sheet_name='Ryzyka')
-
-    st.success("Dane zostały wyeksportowane do pliku Excel: Analiza_ryzyka.xlsx")
+    # Rozpocznij pobieranie pliku
+    with open(file_name, "rb") as f:
+        st.download_button(
+            label="Pobierz plik XLSX",
+            data=f,
+            file_name=file_name,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )

@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
+ # -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
-import io
+from io import BytesIO
 
 st.set_page_config(page_title="Analiza ryzyka", layout="wide")
 st.title("🔐 Analiza ryzyka systemów teleinformatycznych")
@@ -82,22 +82,32 @@ st.dataframe(
     use_container_width=True
 )
 
-# Eksport do CSV
-st.subheader("📥 Eksportuj dane")
-if st.button("Eksportuj do CSV"):
-    # Tworzenie DataFrame z nagłówkami w języku polskim
-    df_export = st.session_state.df.rename(columns={
-        "Zagrożenie": "Zagrożenie",
-        "Prawdopodobieństwo": "Prawdopodobieństwo",
-        "Wpływ": "Wpływ",
-        "Poziom ryzyka": "Poziom ryzyka",
-        "Klasyfikacja": "Klasyfikacja"
-    })
+# 📥 Konwersja na Excel
+def to_excel(df):
+    output = BytesIO()
+    writer = pd.ExcelWriter(output, engine='xlsxwriter')
+    df.to_excel(writer, index=False, sheet_name='Arkusz1')  # Zmiana nazwy arkusza na polską
+    workbook = writer.book
+    worksheet = writer.sheets['Arkusz1']  # Odwołanie do arkusza po polsku
     
-    csv = df_export.to_csv(index=False, encoding='utf-8-sig', sep=';')  # Użyj `;` jako separatora
-    st.download_button(
-        label="Pobierz plik CSV",
-        data=csv,
-        file_name='zagrozenia.csv',  # Nazwa pliku
-        mime='text/csv',
-    )
+    writer.close()
+    processed_data = output.getvalue()
+    return processed_data
+
+df_export = st.session_state.df.rename(columns={
+       "Zagrożenie": "Zagrożenie",
+       "Prawdopodobieństwo": "Prawdopodobieństwo",
+       "Wpływ": "Wpływ",
+       "Poziom ryzyka": "Poziom ryzyka",
+       "Klasyfikacja": "Klasyfikacja"
+   })
+
+df_xlsx = to_excel(df_export)
+
+st.subheader("📥 Eksportuj dane")
+st.download_button(
+    label="Pobierz plik Excel",
+    data=df_xlsx,
+    file_name='zagrozenia.xlsx',
+    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+)

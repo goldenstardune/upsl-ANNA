@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import io
 
 st.set_page_config(page_title="Analiza ryzyka", layout="wide")
 st.title("🔐 Analiza ryzyka systemów teleinformatycznych")
@@ -52,17 +51,17 @@ edited_df = st.data_editor(
 st.session_state.df = edited_df.copy()
 
 # Oblicz poziom ryzyka i klasyfikację
-edited_df["Poziom ryzyka"] = edited_df["Prawdopodobieństwo"] * edited_df["Wpływ"]
-edited_df["Klasyfikacja"] = edited_df["Poziom ryzyka"].apply(klasyfikuj_ryzyko)
+st.session_state.df["Poziom ryzyka"] = st.session_state.df["Prawdopodobieństwo"] * st.session_state.df["Wpływ"]
+st.session_state.df["Klasyfikacja"] = st.session_state.df["Poziom ryzyka"].apply(klasyfikuj_ryzyko)
 
 # 📋 Filtrowanie
 st.subheader("📋 Filtruj według poziomu ryzyka")
 filt = st.radio("Pokaż:", ["Wszystkie", "Niskie", "Średnie", "Wysokie"], horizontal=True)
 
 if filt != "Wszystkie":
-    df_filtered = edited_df[edited_df["Klasyfikacja"] == filt]
+    df_filtered = st.session_state.df[st.session_state.df["Klasyfikacja"] == filt]
 else:
-    df_filtered = edited_df
+    df_filtered = st.session_state.df
 
 # 🎨 Kolorowanie
 def koloruj(val):
@@ -84,14 +83,8 @@ st.dataframe(
 # 📥 Eksport do CSV
 st.subheader("📥 Eksportuj dane")
 if st.button("Eksportuj do CSV"):
-    # Tworzenie DataFrame z nagłówkami w języku polskim
-    df_export = st.session_state.df.rename(columns={
-        "Zagrożenie": "Zagrożenie",
-        "Prawdopodobieństwo": "Prawdopodobieństwo",
-        "Wpływ": "Wpływ",
-        "Poziom ryzyka": "Poziom ryzyka",
-        "Klasyfikacja": "Klasyfikacja"
-    })
+    # Przygotowanie DataFrame do eksportu
+    df_export = st.session_state.df.copy()
     
     csv = df_export.to_csv(index=False, encoding='utf-8', sep=';')  # Użyj `;` jako separatora
     st.download_button(

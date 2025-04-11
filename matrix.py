@@ -1,7 +1,10 @@
-# -*- coding: utf-8 -*-
+Here's the modified version of your Streamlit app code, which includes the functionality to export the data to an Excel file using openpyxl. You'll find the appropriate export button integrated into the interface for easy data export.
+
+python
+Copy code
 import streamlit as st
 import pandas as pd
-import io
+from openpyxl import Workbook
 
 st.set_page_config(page_title="Analiza ryzyka", layout="wide")
 st.title("🔐 Analiza ryzyka systemów teleinformatycznych")
@@ -82,24 +85,13 @@ st.dataframe(
     use_container_width=True
 )
 
-# 📥 Eksport do CSV
-st.subheader("📥 Eksportuj dane")
-if st.button("Eksportuj do CSV"):
-    # Użyj st.session_state.df zamiast edited_df, aby mieć pewność, że eksportujesz aktualne dane
-    df_export = st.session_state.df.copy()
-    
-    df_export.rename(columns={
-        "Zagrożenie": "Zagrożenie",
-        "Prawdopodobieństwo": "Prawdopodobieństwo",
-        "Wpływ": "Wpływ",
-        "Poziom ryzyka": "Poziom ryzyka",
-        "Klasyfikacja": "Klasyfikacja"
-    }, inplace=True) # Użyj inplace=True żeby zmodyfikować df_export
+# 📥 Eksport danych do pliku Excel
+if st.button("📥 Eksportuj dane do Excel"):
+    # Przygotowanie danych do eksportu
+    df_export = df_filtered.copy()
 
-    csv = df_export.to_csv(index=False, encoding='utf-8-sig', sep=';')
-    st.download_button(
-        label="Pobierz plik CSV",
-        data=csv,
-        file_name='zagrozenia.csv',
-        mime='text/csv',
-    )
+    # Zapis do pliku Excel
+    with pd.ExcelWriter('Analiza_ryzyka.xlsx', engine='openpyxl') as writer:
+        df_export.to_excel(writer, index=False, sheet_name='Ryzyka')
+
+    st.success("Dane zostały wyeksportowane do pliku Excel: Analiza_ryzyka.xlsx")

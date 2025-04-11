@@ -79,3 +79,13 @@ st.dataframe(
     df_filtered.style.applymap(koloruj, subset=["Klasyfikacja"]),
     use_container_width=True
 )
+
+# Dodatkowe informacje o zabezpieczeniach sieciowych
+st.subheader("💼 Zalecenia dotyczące zabezpieczeń sieciowych")
+st.write("""
+- **Zapory ogniowe (firewall)**: Użyj zapory, aby monitorować i kontrolować ruch wchodzący i wychodzący.
+- **Autoryzacja i uwierzytelnianie**: Stosuj autoryzację dwuskładnikową dla kont administratorów i innych krytycznych zasobów.
+- **Szyfrowanie**: Zastosuj szyfrowanie danych przesyłanych przez sieć oraz przechowywanych danych.
+- **Edukacja użytkowników**: Przeprowadzaj regularne szkolenia z zakresu cyberbezpieczeństwa dla pracowników.
+- **Regularne aktualizacje**: Utrzymuj aktualność systemów operacyjnych i oprogramowania zabezpieczającego.
+""")

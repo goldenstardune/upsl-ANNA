@@ -82,24 +82,26 @@ st.dataframe(
     use_container_width=True
 )
 
-# 📥 Eksport do CSV
+# 📥 Eksport do Excel
 st.subheader("📥 Eksportuj dane")
-if st.button("Eksportuj do CSV"):
-    # Użyj st.session_state.df zamiast edited_df, aby mieć pewność, że eksportujesz aktualne dane
+if st.button("Eksportuj do Excela"):
     df_export = st.session_state.df.copy()
-    
     df_export.rename(columns={
         "Zagrożenie": "Zagrożenie",
         "Prawdopodobieństwo": "Prawdopodobieństwo",
         "Wpływ": "Wpływ",
         "Poziom ryzyka": "Poziom ryzyka",
         "Klasyfikacja": "Klasyfikacja"
-    }, inplace=True) # Użyj inplace=True żeby zmodyfikować df_export
+    }, inplace=True)
 
-    csv = df_export.to_csv(index=False, encoding='utf-8-sig', sep=';')
+    # Utworzenie pliku Excel w pamięci
+    excel_file = io.BytesIO()
+    df_export.to_excel(excel_file, index=False, encoding='utf-8', sheet_name='Arkusz1')
+    excel_file.seek(0)
+
     st.download_button(
-        label="Pobierz plik CSV",
-        data=csv,
-        file_name='zagrozenia.csv',
-        mime='text/csv',
+        label="Pobierz plik Excel",
+        data=excel_file,
+        file_name='zagrozenia.xlsx',
+        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )

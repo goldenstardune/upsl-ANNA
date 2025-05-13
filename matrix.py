@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np 
 
 st.set_page_config(page_title="Analiza ryzyka", layout="wide")
 st.title("🔐 Analiza ryzyka systemów teleinformatycznych")
@@ -93,6 +94,7 @@ if st.button("Eksportuj do CSV"):
         file_name='zagrozenia.csv',  # Nazwa pliku
         mime='text/csv',
     )
+    
     
 # ---------------------------------------------------------------------
 # Moduł ISO/IEC 9126 - Ankieta

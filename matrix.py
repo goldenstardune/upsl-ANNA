@@ -221,8 +221,8 @@ for kontrola in kontrole_bezpieczenstwa[obszar]:
     )
 
 # Obliczenie średniego poziomu dojrzałości
-oceny_obszaru = st.session_state.oceny_zgodnosci[obszar].values()
-sredni_poziom = np.mean(list(oceny_obszaru))
+oceny_obszaru = list(st.session_state.oceny_zgodnosci[obszar].values())
+sredni_poziom = np.mean(oceny_obszaru)
 
 st.subheader("Podsumowanie:")
 st.metric(label=f"Średni poziom dojrzałości w obszarze '{obszar}'", value=f"{sredni_poziom:.2f}")

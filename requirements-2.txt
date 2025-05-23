@@ -1,11 +1,5 @@
 streamlit
 pandas
-scikit-learn
-plotly
-openpyxl
-xgboost
-matplotlib
-seaborn
-imbalanced-learn
 numpy
-io
+SQLAlchemy
+psycopg2-binary

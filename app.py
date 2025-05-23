@@ -1,28 +1,61 @@
-import os
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+import io
+import os
+from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.types import Float
 
-# Ustawienia bazy danych
-DATABASE_URL = os.getenv("DATABASE_URL")
-engine = create_engine(DATABASE_URL)
-Session = sessionmaker(bind=engine)
+# Konfiguracja połączenia z bazą danych
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    DATABASE_URL = "postgresql://user:password@host:port/database"  # Zastąp danymi lokalnymi
+
+engine = create_engine(DATABASE_URL, pool_pre_ping=True) # Dodano pool_pre_ping
 Base = declarative_base()
 
-# Model danych dla zagrożeń
-class Risk(Base):
-    __tablename__ = 'risks'
-    id = Column(Integer, primary_key=True)
-    description = Column(String)
-    probability = Column(Integer)
-    impact = Column(Integer)
+# Definicja modelu danych dla zagrożeń
+class Zagrozenie(Base):
+    __tablename__ = "zagrozenia"
 
-# Utwórz tabelę, jeśli nie istnieje
+    id = Column(Integer, primary_key=True)
+    zagrozenie = Column(String)
+    prawdopodobienstwo = Column(Integer)
+    wplyw = Column(Integer)
+    poziom_ryzyka = Column(Integer)
+    klasyfikacja = Column(String)
+
+# Definicja modelu danych dla ISO 9126
+class ISO9126Ocena(Base):
+    __tablename__ = "iso9126_oceny"
+
+    id = Column(Integer, primary_key=True)
+    funkcjonalnosc = Column(Integer)
+    niezawodnosc = Column(Integer)
+    uzytecznosc = Column(Integer)
+    efektywnosc = Column(Integer)
+    utrzymywalnosc = Column(Integer)
+    przenosnosc = Column(Integer)
+
+# Definicja modelu danych dla ISO 27001
+class ISO27001Ocena(Base):
+    __tablename__ = "iso27001_oceny"
+
+    id = Column(Integer, primary_key=True)
+    obszar = Column(String)
+    polityka_bezpieczenstwa_informacji = Column(Integer)
+    organizacja_bezpieczenstwa_informacji = Column(Integer)
+    zarzadzanie_zasobami = Column(Integer)
+    bezpieczenstwo_zasobow_ludzkich = Column(Integer)
+
+# Utworzenie tabel w bazie danych
 Base.metadata.create_all(engine)
+
+# Inicjalizacja sesji
+Session = sessionmaker(bind=engine)
+session = Session()
 
 st.set_page_config(page_title="Analiza ryzyka", layout="wide")
 st.title("🔐 Analiza ryzyka systemów teleinformatycznych")
@@ -36,14 +69,54 @@ def klasyfikuj_ryzyko(poziom):
     else:
         return "Wysokie"
 
-# Wczytanie danych do sesji z bazy danych
-def fetch_risks():
-    with Session() as session:
-        risks = pd.read_sql(session.query(Risk).statement, session.bind)
-    return risks
+# Pobranie danych z bazy danych lub domyślne
+def get_zagrozenia_from_db():
+    try:
+        zagrozenia = session.query(Zagrozenie).all()
+        if zagrozenia:
+            return pd.DataFrame([{
+                'Zagrożenie': z.zagrozenie,
+                'Prawdopodobieństwo': z.prawdopodobienstwo,
+                'Wpływ': z.wplyw,
+                'Poziom ryzyka': z.poziom_ryzyka,
+                'Klasyfikacja': z.klasyfikacja
+            } for z in zagrozenia])
+        else:
+            return pd.DataFrame(default_risks)
+    except Exception as e:
+        st.error(f"Błąd połączenia z bazą danych: {e}")
+        return pd.DataFrame(default_risks)
 
+# Domyślna lista zagrożeń
+default_risks = [
+    {"Zagrożenie": "Awaria serwera", "Prawdopodobieństwo": 4, "Wpływ": 5, "Poziom ryzyka": 20, "Klasyfikacja": "Wysokie"},
+    {"Zagrożenie": "Atak DDoS", "Prawdopodobieństwo": 3, "Wpływ": 4, "Poziom ryzyka": 12, "Klasyfikacja": "Średnie"},
+    {"Zagrożenie": "Błąd ludzki", "Prawdopodobieństwo": 5, "Wpływ": 3, "Poziom ryzyka": 15, "Klasyfikacja": "Wysokie"},
+    {"Zagrożenie": "Utrata zasilania", "Prawdopodobieństwo": 2, "Wpływ": 2, "Poziom ryzyka": 4, "Klasyfikacja": "Niskie"}
+]
+
+# Wczytanie danych do sesji
 if "df" not in st.session_state:
-    st.session_state.df = fetch_risks()
+    st.session_state.df = get_zagrozenia_from_db()
+
+# Zapisywanie danych do bazy danych
+def save_zagrozenia_to_db(df):
+    try:
+        session.query(Zagrozenie).delete()  # Usuń istniejące dane
+        for index, row in df.iterrows():
+            zagrozenie = Zagrozenie(
+                zagrozenie=row['Zagrożenie'],
+                prawdopodobienstwo=row['Prawdopodobieństwo'],
+                wplyw=row['Wpływ'],
+                poziom_ryzyka=row['Poziom ryzyka'],
+                klasyfikacja=row['Klasyfikacja']
+            )
+            session.add(zagrozenie)
+        session.commit()
+        st.success("Dane zagrożeń zapisane do bazy danych.")
+    except Exception as e:
+        session.rollback()
+        st.error(f"Błąd zapisu do bazy danych: {e}")
 
 # ➕ Dodawanie nowego ryzyka
 st.subheader("➕ Dodaj nowe zagrożenie")
@@ -54,11 +127,10 @@ with st.form("add_risk_form"):
     submitted = st.form_submit_button("Dodaj")
 
     if submitted and name.strip() != "":
-        new_risk = Risk(description=name, probability=prob, impact=impact)
-        with Session() as session:
-            session.add(new_risk)
-            session.commit()
-        st.session_state.df = fetch_risks()
+        new_row = {"Zagrożenie": name, "Prawdopodobieństwo": prob, "Wpływ": impact}
+        new_row["Poziom ryzyka"] = new_row["Prawdopodobieństwo"] * new_row["Wpływ"]
+        new_row["Klasyfikacja"] = klasyfikuj_ryzyko(new_row["Poziom ryzyka"])
+        st.session_state.df = pd.concat([st.session_state.df, pd.DataFrame([new_row])], ignore_index=True)
         st.success("Zagrożenie dodane.")
 
 # ✏️ Edytuj ryzyka w interaktywnej tabeli
@@ -106,16 +178,21 @@ st.dataframe(
 # 📥 Eksport do CSV
 st.subheader("📥 Eksportuj dane")
 if st.button("Eksportuj do CSV"):
+    # Przygotowanie DataFrame do eksportu
     df_export = st.session_state.df.copy()
     
-    csv = df_export.to_csv(index=False, encoding='utf-8', sep=';')  # Użyj `;` jako separatora
+    csv = df_export.to_csv(index=False, encoding='utf-8', sep=';')
     st.download_button(
         label="Pobierz plik CSV",
         data=csv,
         file_name='zagrozenia.csv',
         mime='text/csv',
     )
-    
+
+# Zapisz zmiany w bazie danych
+if st.button("Zapisz zmiany w bazie danych"):
+    save_zagrozenia_to_db(st.session_state.df)
+
 # ---------------------------------------------------------------------
 # Moduł ISO/IEC 9126 - Ankieta
 # ---------------------------------------------------------------------
@@ -132,7 +209,22 @@ cechy_jakosci = {
 
 # Inicjalizacja stanu sesji dla ocen
 if "oceny" not in st.session_state:
-    st.session_state.oceny = {cecha: 3 for cecha in cechy_jakosci}
+    # Spróbuj pobrać z bazy danych, jeśli nie ma, ustaw domyślne
+    try:
+        ocena_z_bazy = session.query(ISO9126Ocena).first()
+        if ocena_z_bazy:
+                st.session_state.oceny = {
+                "Funkcjonalność": ocena_z_bazy.funkcjonalnosc,
+                "Niezawodność": ocena_z_bazy.niezawodnosc,
+                "Użyteczność": ocena_z_bazy.uzytecznosc,
+                "Efektywność": ocena_z_bazy.efektywnosc,
+                "Utrzymywalność": ocena_z_bazy.utrzymywalnosc,
+                "Przenośność": ocena_z_bazy.przenosnosc,
+            }
+        else:
+            st.session_state.oceny = {cecha: 3 for cecha in cechy_jakosci}
+    except:
+        st.session_state.oceny = {cecha: 3 for cecha in cechy_jakosci}
 
 st.subheader("Oceń system (1-5) dla każdej cechy:")
 for cecha, opis in cechy_jakosci.items():
@@ -145,16 +237,87 @@ df_oceny = pd.DataFrame([srednie_oceny])
 
 st.subheader("Wyniki oceny:")
 st.dataframe(df_oceny)
+# ---------------------------------------------------------------------
+# Moduł ISO/IEC 9126 - Ankieta
+# ---------------------------------------------------------------------
+st.header("📊 Moduł ISO/IEC 9126 - Ocena Jakości Oprogramowania")
+
+cechy_jakosci = {
+    "Funkcjonalność": "Stopień, w jakim oprogramowanie spełnia określone potrzeby użytkownika.",
+    "Niezawodność": "Zdolność oprogramowania do utrzymania określonego poziomu wydajności.",
+    "Użyteczność": "Łatwość używania oprogramowania przez użytkowników.",
+    "Efektywność": "Zasoby (czas, energia), jakie oprogramowanie zużywa podczas wykonywania zadań.",
+    "Utrzymywalność": "Łatwość modyfikowania, naprawiania i ulepszania oprogramowania.",
+    "Przenośność": "Zdolność oprogramowania do działania w różnych środowiskach."
+}
+
+# Inicjalizacja stanu sesji dla ocen
+if "oceny" not in st.session_state:
+    # Spróbuj pobrać z bazy danych, jeśli nie ma, ustaw domyślne
+    try:
+        ocena_z_bazy = session.query(ISO9126Ocena).first()
+        if ocena_z_bazy:
+            st.session_state.oceny = {
+                "Funkcjonalność": ocena_z_bazy.funkcjonalnosc,
+                "Niezawodność": ocena_z_bazy.niezawodnosc,
+                "Użyteczność": ocena_z_bazy.uzytecznosc,
+                "Efektywność": ocena_z_bazy.efektywnosc,
+                "Utrzymywalność": ocena_z_bazy.utrzymywalnosc,
+                "Przenośność": ocena_z_bazy.przenosnosc,
+            }
+        else:
+            st.session_state.oceny = {cecha: 3 for cecha in cechy_jakosci}
+    except Exception as e:
+        st.error(
+            f"Błąd pobierania ocen ISO9126 z bazy danych: {e}, ustawiam wartości domyślne.")  # Obsługa błędu
+        st.session_state.oceny = {cecha: 3 for cecha in cechy_jakosci}
+
+st.subheader("Oceń system (1-5) dla każdej cechy:")
+for cecha, opis in cechy_jakosci.items():
+    st.write(f"**{cecha}**: {opis}")
+    st.session_state.oceny[cecha] = st.slider(f"Ocena {cecha} (1-5)", 1, 5,
+                                                st.session_state.oceny[cecha])
+
+# Obliczenie średnich
+srednie_oceny = {cecha: st.session_state.oceny[cecha] for cecha in cechy_jakosci}
+df_oceny = pd.DataFrame([srednie_oceny])
+
+st.subheader("Wyniki oceny:")
+st.dataframe(df_oceny)
 
 # Interpretacja wyników
 st.subheader("Interpretacja:")
 interpretacje = {
-    "Funkcjonalność": {1: "Funkcjonalność wymaga znacznych poprawek.", 3: "Funkcjonalność jest zadowalająca, ale jest miejsce na ulepszenia.", 5: "Funkcjonalność jest na bardzo wysokim poziomie."},
-    "Niezawodność": {1: "Niezawodność jest bardzo niska.", 3: "Niezawodność jest na średnim poziomie.", 5: "Niezawodność jest bardzo wysoka."},
-    "Użyteczność": {1: "Użyteczność wymaga znacznych poprawek.", 3: "Użyteczność jest zadowalająca.", 5: "Użyteczność jest bardzo wysoka."},
-    "Efektywność": {1: "Efektywność jest bardzo niska.", 3: "Efektywność jest na średnim poziomie.", 5: "Efektywność jest bardzo wysoka."},
-    "Utrzymywalność": {1: "Utrzymywalność jest bardzo niska.", 3: "Utrzymywalność jest na średnim poziomie.", 5: "Utrzymywalność jest bardzo wysoka."},
-    "Przenośność": {1: "Przenośność jest bardzo niska.", 3: "Przenośność jest na średnim poziomie.", 5: "Przenośność jest bardzo wysoka."}
+    "Funkcjonalność": {
+        1: "Funkcjonalność wymaga znacznych poprawek.",
+        3: "Funkcjonalność jest zadowalająca, ale jest miejsce na ulepszenia.",
+        5: "Funkcjonalność jest na bardzo wysokim poziomie."
+    },
+    "Niezawodność": {
+        1: "Niezawodność jest bardzo niska.",
+        3: "Niezawodność jest na średnim poziomie.",
+        5: "Niezawodność jest bardzo wysoka."
+    },
+    "Użyteczność": {
+        1: "Użyteczność wymaga znacznych poprawek.",
+        3: "Użyteczność jest zadowalająca.",
+        5: "Użyteczność jest bardzo wysoka."
+    },
+    "Efektywność": {
+        1: "Efektywność jest bardzo niska.",
+        3: "Efektywność jest na średnim poziomie.",
+        5: "Efektywność jest bardzo wysoka."
+    },
+    "Utrzymywalność": {
+        1: "Utrzymywalność jest bardzo niska.",
+        3: "Utrzymywalność jest na średnim poziomie.",
+        5: "Utrzymywalność jest bardzo wysoka."
+    },
+    "Przenośność": {
+        1: "Przenośność jest bardzo niska.",
+        3: "Przenośność jest na średnim poziomie.",
+        5: "Przenośność jest bardzo wysoka."
+    }
 }
 
 for cecha, ocena in st.session_state.oceny.items():
@@ -164,46 +327,3 @@ for cecha, ocena in st.session_state.oceny.items():
         st.info(f"{cecha}: {interpretacje[cecha][3]}")
     else:
         st.success(f"{cecha}: {interpretacje[cecha][5]}")
-
-# ---------------------------------------------------------------------
-# Moduł ISO/IEC 27001 - Ocena Zgodności
-# ---------------------------------------------------------------------
-st.header("🛡️ Moduł ISO/IEC 27001 - Ocena Zgodności")
-
-# Kontrole bezpieczeństwa pogrupowane w obszary
-kontrole_bezpieczenstwa = {
-    "Organizacyjne (A.5)": ["Polityka bezpieczeństwa informacji", "Organizacja bezpieczeństwa informacji", "Zarządzanie zasobami", "Bezpieczeństwo zasobów ludzkich"],
-    "Ludzkie (A.6)": ["Zasady zatrudniania", "Szkolenia z zakresu bezpieczeństwa", "Zarządzanie dostępem użytkowników", "Reagowanie na incydenty bezpieczeństwa"],
-    "Fizyczne (A.7)": ["Bezpieczeństwo fizyczne obwodów bezpieczeństwa", "Kontrola dostępu fizycznego", "Ochrona przed zagrożeniami środowiskowymi", "Bezpieczeństwo sprzętu"],
-    "Techniczne (A.8)": ["Zarządzanie tożsamością i dostępem", "Szyfrowanie danych", "Monitoring i logowanie", "Ochrona przed złośliwym oprogramowaniem"]
-}
-
-# Inicjalizacja stanu sesji dla ocen zgodności
-if "oceny_zgodnosci" not in st.session_state:
-    st.session_state.oceny_zgodnosci = {obszar: {kontrola: 3 for kontrola in kontrole_bezpieczenstwa[obszar]} for obszar in kontrole_bezpieczenstwa}
-
-# Wybór obszaru
-obszar = st.selectbox("Wybierz obszar zgodności z ISO/IEC 27001:", list(kontrole_bezpieczenstwa.keys()))
-
-st.subheader(f"Oceń poziom wdrożenia kontroli w obszarze: {obszar}")
-
-# Prezentacja i ocena kontroli
-for kontrola in kontrole_bezpieczenstwa[obszar]:
-    st.write(f"**Kontrola**: {kontrola}")
-    st.session_state.oceny_zgodnosci[obszar][kontrola] = st.slider(f"Poziom wdrożenia (1-5) dla '{kontrola}'", 1, 5, st.session_state.oceny_zgodnosci[obszar][kontrola])
-
-# Obliczenie średniego poziomu dojrzałości
-oceny_obszaru = list(st.session_state.oceny_zgodnosci[obszar].values())
-sredni_poziom = np.mean(oceny_obszaru)
-
-st.subheader("Podsumowanie:")
-st.metric(label=f"Średni poziom dojrzałości w obszarze '{obszar}'", value=f"{sredni_poziom:.2f}")
-
-# Interpretacja wyniku
-st.subheader("Interpretacja:")
-if sredni_poziom <= 2:
-    st.error(f"Średni poziom dojrzałości w obszarze '{obszar}' jest niski. Wymagane są natychmiastowe działania naprawcze.")
-elif sredni_poziom <= 4:
-    st.warning(f"Średni poziom dojrzałości w obszarze '{obszar}' jest średni. Rozważ wdrożenie dodatkowych kontroli.")
-else:
-    st.success(f"Średni poziom dojrzałości w obszarze '{obszar}' jest wysoki. Dobra robota!")

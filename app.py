@@ -13,6 +13,10 @@ engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)
 Base = declarative_base()
 
+git add requirements.txt
+git commit -m "Add SQLAlchemy to requirements"
+git push origin main
+
 # Model danych dla zagrożeń
 class Risk(Base):
     __tablename__ = 'risks'

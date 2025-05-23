@@ -10,3 +10,6 @@ xgboost
 matplotlib
 seaborn
 imbalanced-learn
+git add requirements.txt
+git commit -m "Add SQLAlchemy to requirements.txt"
+git push origin main

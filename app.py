@@ -36,7 +36,7 @@ def klasyfikuj_ryzyko(poziom):
     else:
         return "Wysokie"
 
-# Wczytanie danych do sesji
+# Wczytanie danych do sesji z bazy danych
 def fetch_risks():
     with Session() as session:
         risks = pd.read_sql(session.query(Risk).statement, session.bind)
@@ -107,7 +107,8 @@ st.dataframe(
 st.subheader("📥 Eksportuj dane")
 if st.button("Eksportuj do CSV"):
     df_export = st.session_state.df.copy()
-    csv = df_export.to_csv(index=False, encoding='utf-8', sep=';')
+    
+    csv = df_export.to_csv(index=False, encoding='utf-8', sep=';')  # Użyj `;` jako separatora
     st.download_button(
         label="Pobierz plik CSV",
         data=csv,
@@ -148,36 +149,12 @@ st.dataframe(df_oceny)
 # Interpretacja wyników
 st.subheader("Interpretacja:")
 interpretacje = {
-    "Funkcjonalność": {
-        1: "Funkcjonalność wymaga znacznych poprawek.",
-        3: "Funkcjonalność jest zadowalająca, ale jest miejsce na ulepszenia.",
-        5: "Funkcjonalność jest na bardzo wysokim poziomie."
-    },
-    "Niezawodność": {
-        1: "Niezawodność jest bardzo niska.",
-        3: "Niezawodność jest na średnim poziomie.",
-        5: "Niezawodność jest bardzo wysoka."
-    },
-    "Użyteczność": {
-        1: "Użyteczność wymaga znacznych poprawek.",
-        3: "Użyteczność jest zadowalająca.",
-        5: "Użyteczność jest bardzo wysoka."
-    },
-    "Efektywność": {
-        1: "Efektywność jest bardzo niska.",
-        3: "Efektywność jest na średnim poziomie.",
-        5: "Efektywność jest bardzo wysoka."
-    },
-    "Utrzymywalność": {
-        1: "Utrzymywalność jest bardzo niska.",
-        3: "Utrzymywalność jest na średnim poziomie.",
-        5: "Utrzymywalność jest bardzo wysoka."
-    },
-    "Przenośność": {
-        1: "Przenośność jest bardzo niska.",
-        3: "Przenośność jest na średnim poziomie.",
-        5: "Przenośność jest bardzo wysoka."
-    }
+    "Funkcjonalność": {1: "Funkcjonalność wymaga znacznych poprawek.", 3: "Funkcjonalność jest zadowalająca, ale jest miejsce na ulepszenia.", 5: "Funkcjonalność jest na bardzo wysokim poziomie."},
+    "Niezawodność": {1: "Niezawodność jest bardzo niska.", 3: "Niezawodność jest na średnim poziomie.", 5: "Niezawodność jest bardzo wysoka."},
+    "Użyteczność": {1: "Użyteczność wymaga znacznych poprawek.", 3: "Użyteczność jest zadowalająca.", 5: "Użyteczność jest bardzo wysoka."},
+    "Efektywność": {1: "Efektywność jest bardzo niska.", 3: "Efektywność jest na średnim poziomie.", 5: "Efektywność jest bardzo wysoka."},
+    "Utrzymywalność": {1: "Utrzymywalność jest bardzo niska.", 3: "Utrzymywalność jest na średnim poziomie.", 5: "Utrzymywalność jest bardzo wysoka."},
+    "Przenośność": {1: "Przenośność jest bardzo niska.", 3: "Przenośność jest na średnim poziomie.", 5: "Przenośność jest bardzo wysoka."}
 }
 
 for cecha, ocena in st.session_state.oceny.items():
@@ -195,38 +172,15 @@ st.header("🛡️ Moduł ISO/IEC 27001 - Ocena Zgodności")
 
 # Kontrole bezpieczeństwa pogrupowane w obszary
 kontrole_bezpieczenstwa = {
-    "Organizacyjne (A.5)": [
-        "Polityka bezpieczeństwa informacji",
-        "Organizacja bezpieczeństwa informacji",
-        "Zarządzanie zasobami",
-        "Bezpieczeństwo zasobów ludzkich"
-    ],
-    "Ludzkie (A.6)": [
-        "Zasady zatrudniania",
-        "Szkolenia z zakresu bezpieczeństwa",
-        "Zarządzanie dostępem użytkowników",
-        "Reagowanie na incydenty bezpieczeństwa"
-    ],
-    "Fizyczne (A.7)": [
-        "Bezpieczeństwo fizyczne obwodów bezpieczeństwa",
-        "Kontrola dostępu fizycznego",
-        "Ochrona przed zagrożeniami środowiskowymi",
-        "Bezpieczeństwo sprzętu"
-    ],
-    "Techniczne (A.8)": [
-        "Zarządzanie tożsamością i dostępem",
-        "Szyfrowanie danych",
-        "Monitoring i logowanie",
-        "Ochrona przed złośliwym oprogramowaniem"
-    ]
+    "Organizacyjne (A.5)": ["Polityka bezpieczeństwa informacji", "Organizacja bezpieczeństwa informacji", "Zarządzanie zasobami", "Bezpieczeństwo zasobów ludzkich"],
+    "Ludzkie (A.6)": ["Zasady zatrudniania", "Szkolenia z zakresu bezpieczeństwa", "Zarządzanie dostępem użytkowników", "Reagowanie na incydenty bezpieczeństwa"],
+    "Fizyczne (A.7)": ["Bezpieczeństwo fizyczne obwodów bezpieczeństwa", "Kontrola dostępu fizycznego", "Ochrona przed zagrożeniami środowiskowymi", "Bezpieczeństwo sprzętu"],
+    "Techniczne (A.8)": ["Zarządzanie tożsamością i dostępem", "Szyfrowanie danych", "Monitoring i logowanie", "Ochrona przed złośliwym oprogramowaniem"]
 }
 
 # Inicjalizacja stanu sesji dla ocen zgodności
 if "oceny_zgodnosci" not in st.session_state:
-    st.session_state.oceny_zgodnosci = {
-        obszar: {kontrola: 3 for kontrola in kontrole_bezpieczenstwa[obszar]}
-        for obszar in kontrole_bezpieczenstwa
-    }
+    st.session_state.oceny_zgodnosci = {obszar: {kontrola: 3 for kontrola in kontrole_bezpieczenstwa[obszar]} for obszar in kontrole_bezpieczenstwa}
 
 # Wybór obszaru
 obszar = st.selectbox("Wybierz obszar zgodności z ISO/IEC 27001:", list(kontrole_bezpieczenstwa.keys()))
@@ -236,10 +190,7 @@ st.subheader(f"Oceń poziom wdrożenia kontroli w obszarze: {obszar}")
 # Prezentacja i ocena kontroli
 for kontrola in kontrole_bezpieczenstwa[obszar]:
     st.write(f"**Kontrola**: {kontrola}")
-    st.session_state.oceny_zgodnosci[obszar][kontrola] = st.slider(
-        f"Poziom wdrożenia (1-5) dla '{kontrola}'", 1, 5,
-        st.session_state.oceny_zgodnosci[obszar][kontrola]
-    )
+    st.session_state.oceny_zgodnosci[obszar][kontrola] = st.slider(f"Poziom wdrożenia (1-5) dla '{kontrola}'", 1, 5, st.session_state.oceny_zgodnosci[obszar][kontrola])
 
 # Obliczenie średniego poziomu dojrzałości
 oceny_obszaru = list(st.session_state.oceny_zgodnosci[obszar].values())

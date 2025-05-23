@@ -3,3 +3,10 @@ pandas
 numpy
 SQLAlchemy
 psycopg2-binary
+scikit-learn
+plotly
+openpyxl
+xgboost
+matplotlib
+seaborn
+imbalanced-learn

@@ -1,8 +1,9 @@
-### 4. Plik `db.py` (jeśli potrzebny osobno)
+### 4. (Opcjonalny) Plik `db.py`
 
-Możesz zdecydować się na oddzielny plik `db.py`, jeśli chcesz oddzielić logikę bazy danych. Oto przykładowa zawartość:
+Jeśli chcesz mieć osobny plik do obsługi połączeń z bazą danych, możesz utworzyć `db.py`:
 
 ```python
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
